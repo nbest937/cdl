@@ -1,0 +1,29 @@
+* CDL
+Work with the Cropland Data Layer (CDL) dataset
+
+** Dataset Description
+The CDL is available for download either through the [[http://datagateway.nrcs.usda.gov/][USDA NRCS
+Geospatial Data Gateway]] or the [[http://nassgeodata.gmu.edu/CropScape/][USDA NASS CropScape web site]].  We
+currently use CropScape.  One advantage of this is that the data is
+made available per county all using the same Albers Equal Area
+projection.
+
+Extensive metadata is available [[http://www.nass.usda.gov/research/Cropland/metadata/meta.htm][here]].
+
+** Codeset Description
+This repository can be found [[https://github.com/nbest937/cdl][here]] on [[https://github.com][GitHub]].
+
+This repository is an example of a Blox component.  Blox is a modular
+source code management, data management and scientific workflow
+concept under development at the University of Chicago's Computation
+Institute.  Blox currently relies on the Git distributed version
+control system and GNU Make, but could conceivably be implemented
+using other source code management systems and dependency tracking
+utilities.
+
+** Copyrights
+
+The codeset was developed by Neil Best at the University of Chicago’s
+Computation Institute in support of ongoing research at the Center for
+Robust Decision Making on Climate and Energy Policy (RDECEP).
+Attribution is appreciated.

@@ -1,0 +1,136 @@
+#+TITLE:     Cropland Data Layer
+#+AUTHOR:    Neil Best
+#+EMAIL:     nbest@ci.uchicago.edu
+#+DATE:      2012-05-04 Fri
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE:  en
+#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+LINK_UP:   
+#+LINK_HOME: 
+#+XSLT:
+
+
+* test the samples from the CropScape Developer Guide
+
+[[http://nassgeodata.gmu.edu/CropScape/devhelp/help.html]]
+
+[[http://nassgeodata.gmu.edu:8080/axis2/services/CDLService/GetCDLFile?year=2009&fips=19015]]
+
+#+begin_src R
+  library( RCurl)
+  library( XML)
+  library( raster)
+  
+  queryUrl <- "http://nassgeodata.gmu.edu:8080/axis2/services/CDLService/GetCDLFile?year=2009&fips=19015"
+  
+  fileUrl <-
+    xpathSApply( xmlInternalTreeParse( getURL( queryUrl)),
+                "//returnURL", fun= xmlValue, simplify= TRUE)
+  
+  fn <- basename( fileUrl)
+  
+  download.file( fileUrl, fn, mode= "wb")
+  
+  r <- raster( fn)
+  
+  NAvalue( r)
+  
+  GDALinfo( fn)
+#+end_src
+
+* create the list of county FIPS codes
+
+#+begin_src R
+  library( foreign)
+  library( foreach)
+  library( doMC)
+  
+  registerDoMC()
+  
+  tiger <- read.dbf( "tiger/tl_2011_us_county.dbf")
+  
+  cdlFips <- tiger[ !str_detect( tiger$STATEFP, "^(02|15|6.|7.)"),
+               c( "STATEFP", "COUNTYFP")]
+  
+  cdlFips <- sort( with( cdlFips, paste( STATEFP, COUNTYFP, sep= "")))
+  names( cdlFips) <- cdlFips 
+#+end_src
+
+* define a function that downloads the data by year, county FIPS
+
+#+begin_src R
+  library( RCurl)
+  library( XML)
+  
+  downloadCdlCounty <- function( fips= "19015", year= "2009", overwrite= FALSE) {
+    queryUrlFormat <- "http://nassgeodata.gmu.edu:8080/axis2/services/CDLService/GetCDLFile?year=%s&fips=%s"
+    queryUrl <- sprintf( queryUrlFormat, year, fips)
+    queryXml <- getURL( queryUrl)
+    fileUrl <-
+      xpathSApply( xmlInternalTreeParse( queryXml),
+                  "//returnURL", fun= xmlValue, simplify= TRUE)
+    list( queryXml,
+          try( silent= TRUE,
+            {
+              fn <- sprintf( "tif/%s", basename( fileUrl))
+              if( !file.exists( fn) || overwrite) {
+                download.file( fileUrl, fn, mode= "wb", quiet= TRUE)
+              }
+              fn
+            } )
+         )
+  }
+  
+  cdl2008 <- llply(  cdlFips, downloadCdlCounty, year="2008", .parallel= TRUE)
+  cdl2006 <- llply( cdlFips, downloadCdlCounty, year="2006", .parallel= TRUE)
+  
+#+end_src
+
+The CDL web service seems to have triansient failures such that not
+all data downloads succeed on the first attempt.  There should be 1270
+files for 2006 and 3109 files for 2008.
+
+** TODO write a test that indicates whether all data appeared
+
+* write out the frequency tables for each county
+
+#+begin_src R
+  cdlTifs <- list.files( "tif", patt= "^CDL.*tif$", full.names= TRUE)
+  
+  writeFreqCsv <- function( tif) {
+    r <- raster( tif)
+    freqCsv <- sprintf( "freq/%s",
+                       str_replace( basename( filename( r)),
+                                   "tif", "csv"))
+    write.csv( freq( r), file= freqCsv, row.names= FALSE)
+    freqCsv
+  }
+  
+  freqCsvs <- llply( cdlTifs, writeFreqCsv, .parallel= TRUE)
+#+end_src
+
+* parse the metadata for crop labels
+
+#+begin_src R
+  library( XML)
+  
+  cdlMeta <-
+    xpathSApply( xmlInternalTreeParse( "metadata/cdlmeta_56m_r_ar_2008.xml"),
+                "//eadetcit", fun= xmlValue, simplify= TRUE)
+  
+  cdlMeta <- unlist( str_split( cdlMeta, "\\n"))
+  
+  pattern <- "^>[[:space:]]+\"([0-9]+)\"[[:space:]]+(.*)$"
+  
+  cdlMeta <-
+    data.frame( do.call( rbind,
+                        str_match_all( cdlMeta, pattern))[, c( 2, 3)],
+               stringsAsFactors= FALSE)
+  
+  
+#+end_src
