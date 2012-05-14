@@ -98,6 +98,7 @@ files for 2006 and 3109 files for 2008.
 
 ** TODO write a test that indicates whether all data appeared
 
+
 * write out the frequency tables for each county
 
 #+begin_src R
@@ -115,6 +116,7 @@ files for 2006 and 3109 files for 2008.
   freqCsvs <- llply( cdlTifs, writeFreqCsv, .parallel= TRUE)
 #+end_src
 
+  
 * parse the metadata for crop labels
 
 #+begin_src R
@@ -135,6 +137,7 @@ files for 2006 and 3109 files for 2008.
   
   
 #+end_src
+
 
 * aggregate and cross-tabulate hectares by state and county
 
@@ -180,10 +183,6 @@ files for 2006 and 3109 files for 2008.
   
   freqDf <- adply( freqMeta, 1, loadFreqFile, .parallel= TRUE)[, -1]
   
-  within( freqDf[ !is.na( freqDf$cdl), ], {
-    browser()
-  })
-  
   freqDf <- within( freqDf[ !is.na( freqDf$cdl), ], {
     cdl <- factor( cdl)
     levels( cdl) <- c( levels( cdl), "254")
@@ -201,22 +200,180 @@ files for 2006 and 3109 files for 2008.
     simple[ wheat] <- "Wheat"
     simple[ nonCrop] <- "Other"
     rm( sameAsCdl, dblCornOther, dblSoyOther, wheat, nonCrop)
-    ha <- round( n *56^2 /10^4)
+    ha <- n *56^2 /10^4
   })
   
-  freqCt <- cast( freqDf, stfips + year ~ simple, value= "n", fun.aggregate= sum)
+  roundSum <- function( x) round( sum( x))
   
   areaStateCt <- dcast( freqDf, year + stfips ~ simple,
                       value.var= "ha",
-                      fun.aggregate= sum,
+                      fun.aggregate= roundSum,
                       margins= c( "stfips", "simple"))
+  
+  
   write.csv( areaStateCt, "cdlStateSimple.csv", row.names= FALSE)
   
   areaCountyCt <- dcast( freqDf, year + stfips + cofips ~ simple,
                        value.var= "ha",
-                       fun.aggregate= sum,
+                       fun.aggregate= roundSum,
                        margins= c( "stfips", "cofips", "simple"))
   write.csv( areaCountyCt, "cdlCountySimple.csv", row.names= FALSE)
   
   zip( "cdlSimple.zip", list.files( patt= "^cdl(County|State)Simple.csv"))
 #+end_src
+
+** TODO round hectares after aggregation
+
+* cross-tabulate 5' grid with each county
+
+#+begin_src R
+  world <- raster()
+  res( world) <- 5/60
+  world[] <- 1:ncell(world)
+  
+  registerDoMC( cores= 8)
+  
+  setOptions( datatype= "INT4U")
+  
+  writeGridCrosstab <- function( tif) {
+    r <- raster( tif)
+    grid <- projectRaster( world, r, method= "ngb", datatype= "INT4U")
+    m <- mask( grid, r, datatype= "INT4U")
+    ct <- crosstab( m, r, long= TRUE)
+    colnames( ct) <- c( "grid", "cdl", "n")
+    gridCsv <- sprintf( "grid/%s",
+                       str_replace( basename( filename( r)),
+                                     "tif", "csv"))
+    with( ct, write.csv( ct[ n != 0, ], file= gridCsv, row.names= FALSE))
+    gc()
+    gridCsv
+  }
+  
+  gridCsvs <- llply( cdlTifs, writeGridCrosstab, .parallel= TRUE)
+#+end_src
+
+* create 5' masks
+  This step depends on `make mask`.
+
+#+begin_src R :tangle aeaGrid.R
+  library( raster)
+  library( rgdal)
+  
+  world <- raster()
+  res( world) <- 5/60
+  world[] <- 1:ncell( world)
+  
+  geoMask <- raster( "mask/CDL_2008.tif")
+  NAvalue(geoMask) <- 255
+  
+  cdlCells <- mask( crop( world, geoMask),
+                   geoMask,
+                   filename= "mask/cdlCells.tif",
+                   overwrite= TRUE)
+  
+  cdlProj <- ogrInfo( "shp/cdl.shp", "cdl")$p4s
+  
+  ##
+  ## too slow!
+  ##
+  ## cdlCellsAea <- projectRaster( cdlCells, res= 56, crs= cdlProj,
+  ##                              method= "ngb",
+  ##                              filename= "mask/cdlCellsAea.tif",
+  ##                              datatype= "INT4U")
+  
+  system( sprintf( "gdalwarp -overwrite -t_srs %s -tr 56 56 -tap -ot UInt32 -dstnodata 0 -multi mask/cdlCells.tif mask/cdlCellsAea.tif", cdlProj))
+  
+  cdlCellsAea <- raster( "mask/cdlCellsAea.tif")
+  
+  cdlCellsFreq <- freq( cdlCellsAea)
+  
+  colnames( cdlCellsFreq) <- c( "grid", "n")
+  write.csv( cdlCellsFreq, "mask/cdlCellsFreq.csv", row.names= FALSE)
+  
+#+end_src
+
+
+* aggregate and cross-tabulate fractions by 5' grid cell
+
+#+begin_src R
+  library( Hmisc)
+  library( reshape2)
+  
+  gridFiles <- list.files( "grid", full.names= TRUE)
+  
+  gridRegex <- "^grid/CDL_([0-9]{4})_([0-9]{2})([0-9]{3})\\.csv"
+  gridMeta <- str_match( gridFiles, gridRegex)
+    
+    
+    
+  loadGridFile <- function( gridMeta) {
+    gridDf <- read.csv( gridMeta[ 1],
+                       ## col.names= c( "cdl", "n")
+                       )
+    within( gridDf, {
+      year <- gridMeta[ 2]
+      stfips <- gridMeta[ 3]
+      cofips <- gridMeta[ 4]})
+  }
+  
+  gridDf <- adply( gridMeta, 1, loadGridFile, .parallel= TRUE)[, -1]
+  
+  gridDf <- within( gridDf[ !is.na( gridDf$cdl), ], {
+    cdl <- factor( cdl)
+    levels( cdl) <- c( levels( cdl), "254")
+    levels( cdl) <- cdlMeta[ -1, 2]
+    simple <- factor( rep( "Other Crops", length( cdl)),
+                     levels= simpleLevels)
+    sameAsCdl <- as.character( cdl) %in% simpleLevels[ 1:9]
+    dblCornOther <- str_detect( cdl, dblCornOtherPatt)
+    dblSoyOther <- str_detect( cdl, dblSoyOtherPatt)
+    wheat <- cdl %in% c( "Durum Wheat", "Spring Wheat", "Winter Wheat")
+    nonCrop <- as.character( cdl) %in% nonCropLevels
+    simple[ sameAsCdl] <- as.character( cdl[ sameAsCdl])
+    simple[ dblCornOther] <- "Dbl Crop Corn/Other"
+    simple[ dblSoyOther] <- "Dbl Crop Soybeans/Other"
+    simple[ wheat] <- "Wheat"
+    simple[ nonCrop] <- "Other"
+    rm( sameAsCdl, dblCornOther, dblSoyOther, wheat, nonCrop)
+    ## ha <- round( n *56^2 /10^4)
+  })
+  
+  
+  numericSum <- function( x) sum( as.numeric( x))
+  
+  gridCt <- dcast( gridDf, year + grid ~ simple,
+                       value.var= "n",
+                       fun.aggregate= numericSum,
+                       margins= c( "grid", "simple"))
+  colnames( gridCt)[ colnames( gridCt) == "(all)"] <- "cdl"
+  
+  cdlCellsFreq <- read.csv( "mask/cdlCellsFreq.csv")
+  
+  merged <-
+    within( merge( gridCt, cdlCellsFreq, by= "grid", all.x= TRUE),
+           Other <- Other + n - cdl)
+  
+  fracs <-
+    dcast( within( melt( merged[ , -which( colnames( merged) == "cdl")],
+                        c( "grid", "n", "year")),
+                  value <- value / n),
+          formula= year + grid ~ variable,
+          subset= .(variable != "cdl"),
+          margins= "variable",
+          fun.aggregate= sum)
+  
+  ## colnames( fracs)[ colnames( fracs) == "(all)"] <- "
+  
+  write.csv( format.df( fracs,
+                       dec= 3,
+                       numeric.dollar= FALSE,
+                       na.blank= TRUE),
+            row.names= FALSE,
+            file= "cdlGridSimple.csv",
+            quote= FALSE)
+  
+  
+  zip( "cdlSimple.zip", "cdlGridSimple.csv")
+#+end_src
+
+** TODO consider abstracting aggregation as a function
