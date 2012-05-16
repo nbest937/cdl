@@ -271,7 +271,7 @@ files for 2006 and 3109 files for 2008.
                    filename= "mask/cdlCells.tif",
                    overwrite= TRUE)
   
-  cdlProj <- ogrInfo( "shp/cdl.shp", "cdl")$p4s
+  cdlTiles <- readOGR( "shp/cdl.shp", "cdl")
   
   ##
   ## too slow!
@@ -281,7 +281,19 @@ files for 2006 and 3109 files for 2008.
   ##                              filename= "mask/cdlCellsAea.tif",
   ##                              datatype= "INT4U")
   
-  system( sprintf( "gdalwarp -overwrite -t_srs %s -tr 56 56 -tap -ot UInt32 -dstnodata 0 -multi mask/cdlCells.tif mask/cdlCellsAea.tif", cdlProj))
+  cdlCellsAea <- projectRaster( cdlCells, crs= cdlProj,
+                               method= "ngb",
+                               filename= "mask/cdlCellsAea.tif",
+                               overwrite= TRUE,
+                               datatype= "INT4U")
+  
+  system( sprintf( "gdalwarp -q -overwrite -t_srs '%s' -tr 56 56 -tap -ot UInt32 -dstnodata 0 -multi mask/cdlCells.tif mask/cdlCellsAea.tif", proj4string( cdlTiles)))
+  
+  system( sprintf( "gdalwarp -q -overwrite -t_srs '%s' -tr 56 56 -te %s -ot UInt32 -dstnodata 0 -multi mask/cdlCells.tif mask/cdlCellsAeaNoTap.tif",
+                  proj4string( cdlTiles),
+                  paste( matrix( bbox( cdlTiles), nrow=1), collapse= " ")))
+  
+  paste( matrix( bbox( cdlTiles), nrow=1), collapse= " ")
   
   cdlCellsAea <- raster( "mask/cdlCellsAea.tif")
   
@@ -289,6 +301,34 @@ files for 2006 and 3109 files for 2008.
   
   colnames( cdlCellsFreq) <- c( "grid", "n")
   write.csv( cdlCellsFreq, "mask/cdlCellsFreq.csv", row.names= FALSE)
+  
+  
+  countPixelsEntireCells <- function( tif) {
+    cdl <- raster( tif)
+    cells <- projectRaster( world, cdl, method= "ngb", datatype= "INT4U")
+    worldMask <- raster( world)
+    allCells <- unique( cells[ ])
+    worldMask[ allCells] <- 1
+    entireCells <- trim( worldMask)
+    xy <- c( xmin( entireCells),
+            ymin( entireCells),
+            xmax( entireCells),
+            ymax( entireCells))
+    coords <-
+      matrix( c( xy,
+                xy[ c( 1, 4, 3, 2)]),
+             ncol=2,
+             byrow= TRUE)
+    newExtent <-
+      extent( spTransform( SpatialPoints( coords,
+                                         projection( world, asText= FALSE)),
+                          projection( cdl, asText= FALSE)))
+    newCells <- expand( raster( cdl), newExtent)
+    newCells <- projectRaster( world, newCells, method= "ngb", datatype= "INT4U")
+    df <- data.frame( freq( newCells))
+    colnames( df) <- c( "cell", "n")
+    df[ df$cell %in% allCells, ]
+  }
   
 #+end_src
 
@@ -303,9 +343,9 @@ files for 2006 and 3109 files for 2008.
   
   gridRegex <- "^grid/CDL_([0-9]{4})_([0-9]{2})([0-9]{3})\\.csv"
   gridMeta <- str_match( gridFiles, gridRegex)
-    
-    
-    
+  
+  
+  
   loadGridFile <- function( gridMeta) {
     gridDf <- read.csv( gridMeta[ 1],
                        ## col.names= c( "cdl", "n")
@@ -342,16 +382,17 @@ files for 2006 and 3109 files for 2008.
   numericSum <- function( x) sum( as.numeric( x))
   
   gridCt <- dcast( gridDf, year + grid ~ simple,
-                       value.var= "n",
-                       fun.aggregate= numericSum,
-                       margins= c( "grid", "simple"))
+                  value.var= "n",
+                  fun.aggregate= numericSum,
+                  margins= c( "grid", "simple"))
   colnames( gridCt)[ colnames( gridCt) == "(all)"] <- "cdl"
   
   cdlCellsFreq <- read.csv( "mask/cdlCellsFreq.csv")
   
   merged <-
     within( merge( gridCt, cdlCellsFreq, by= "grid", all.x= TRUE),
-           Other <- Other + n - cdl)
+           noData <- n - cdl)
+  ##           Other <- Other + n - cdl)
   
   fracs <-
     dcast( within( melt( merged[ , -which( colnames( merged) == "cdl")],
