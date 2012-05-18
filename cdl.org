@@ -59,7 +59,9 @@
                c( "STATEFP", "COUNTYFP")]
   
   cdlFips <- sort( with( cdlFips, paste( STATEFP, COUNTYFP, sep= "")))
-  names( cdlFips) <- cdlFips 
+  names( cdlFips) <- cdlFips
+  
+  state <- read.dbf( "tiger/tl_2011_us_state.dbf")
 #+end_src
 
 * define a function that downloads the data by year, county FIPS
@@ -141,9 +143,12 @@ files for 2006 and 3109 files for 2008.
 
 * aggregate and cross-tabulate hectares by state and county
 
+** TODO subtrees depend on this prelude
+
 #+begin_src R
   library( reshape2)
-  
+  library( stringr)
+
   freqFiles <- list.files( "freq", full.names= TRUE)
   
   freqRegex <- "^freq/CDL_([0-9]{4})_([0-9]{2})([0-9]{3})\\.csv"
@@ -159,7 +164,35 @@ files for 2006 and 3109 files for 2008.
       stfips <- freqMeta[ 3]
       cofips <- freqMeta[ 4]})
   }
+
+  roundSum <- function( x) round( sum( x))
+
+  freqDf <- adply( freqMeta, 1, loadFreqFile, .parallel= TRUE)[, -1]  
+#+end_src
+
+
+** aggregate original categories
+
+#+begin_src R
+  freqDf <- within( freqDf, ha <- n * 56^2 / 10^4)
   
+  areaState <- ddply( freqDf, .( year, stfips, cdl),
+                     colwise( roundSum, c( "n", "ha")))
+  
+  ## write out AR summary to look for weird switchgrass figures
+  
+  write.csv( with( areaState, areaState[ stfips == "05" & !is.na( cdl),]),
+            file="AR.csv", row.names= FALSE)
+  
+  with( freqDf, freqDf[ !is.na( cdl) & cdl == 62 & stfips == "05",])
+  
+  
+#+end_src
+
+
+** aggregate simplified categories
+
+#+begin_src R
   simpleLevels <- c( "Corn", "Soybeans", "Alfalfa",
                     "Other Hay/Non Alfalfa", "Switchgrass",
                     "Pasture/Grass", "Pasture/Hay",
@@ -181,8 +214,6 @@ files for 2006 and 3109 files for 2008.
   dblCornOtherPatt <- "^Dbl Crop (Oats|Barley|WinWht)/Corn"
   dblSoyOtherPatt <- "^Dbl Crop (Soybeans/(Cotton|Oats)|(WinWht|Barley)/Soybeans)"
   
-  freqDf <- adply( freqMeta, 1, loadFreqFile, .parallel= TRUE)[, -1]
-  
   freqDf <- within( freqDf[ !is.na( freqDf$cdl), ], {
     cdl <- factor( cdl)
     levels( cdl) <- c( levels( cdl), "254")
@@ -203,7 +234,6 @@ files for 2006 and 3109 files for 2008.
     ha <- n *56^2 /10^4
   })
   
-  roundSum <- function( x) round( sum( x))
   
   areaStateCt <- dcast( freqDf, year + stfips ~ simple,
                       value.var= "ha",
@@ -251,6 +281,7 @@ files for 2006 and 3109 files for 2008.
   
   gridCsvs <- llply( cdlTifs, writeGridCrosstab, .parallel= TRUE)
 #+end_src
+
 
 * create 5' masks
   This step depends on `make mask`.
@@ -302,9 +333,12 @@ files for 2006 and 3109 files for 2008.
   colnames( cdlCellsFreq) <- c( "grid", "n")
   write.csv( cdlCellsFreq, "mask/cdlCellsFreq.csv", row.names= FALSE)
   
+  tifRegex <- "^tif/CDL_([0-9]{4})_([0-9]{2})([0-9]{3})\\.tif"
+  tifMeta <- str_match( cdlTifs, tifRegex)
   
-  countPixelsEntireCells <- function( tif) {
-    cdl <- raster( tif)
+  countPixelsEntireCells <- function( tifMeta) {
+    gc()
+    cdl <- raster( tifMeta[ 1])
     cells <- projectRaster( world, cdl, method= "ngb", datatype= "INT4U")
     worldMask <- raster( world)
     allCells <- unique( cells[ ])
@@ -327,14 +361,26 @@ files for 2006 and 3109 files for 2008.
     newCells <- projectRaster( world, newCells, method= "ngb", datatype= "INT4U")
     df <- data.frame( freq( newCells))
     colnames( df) <- c( "cell", "n")
-    df[ df$cell %in% allCells, ]
+    cellsCsv <- sprintf( "cells/%s",
+                       str_replace( basename( filename( cdl)),
+                                   "tif", "csv"))  
+    df <- within( df[ df$cell %in% allCells, ], {
+      year <- tifMeta[ 2]
+      stfips <- tifMeta[ 3]
+      cofips <- tifMeta[ 4]})
+    write.csv( df, file= cellsCsv, row.names= FALSE)
+    cellsCsv
   }
   
+  
+  cellPixels <- alply( tifMeta, 1, countPixelsEntireCells, .parallel= TRUE)
+  
+  cellPixels <- alply( tifMeta[ -(1:1449),], 1, countPixelsEntireCells, .parallel= TRUE)
 #+end_src
 
 
 * aggregate and cross-tabulate fractions by 5' grid cell
-
+  
 #+begin_src R
   library( Hmisc)
   library( reshape2)
@@ -386,7 +432,18 @@ files for 2006 and 3109 files for 2008.
                   fun.aggregate= numericSum,
                   margins= c( "grid", "simple"))
   colnames( gridCt)[ colnames( gridCt) == "(all)"] <- "cdl"
-  
+
+#+end_src
+
+** TODO consider abstracting aggregation as a function
+
+
+** originally computed complete cell pixel counts globally
+
+It seems that the CDL chunks are not aligned.
+
+#+begin_src R
+
   cdlCellsFreq <- read.csv( "mask/cdlCellsFreq.csv")
   
   merged <-
@@ -417,4 +474,16 @@ files for 2006 and 3109 files for 2008.
   zip( "cdlSimple.zip", "cdlGridSimple.csv")
 #+end_src
 
-** TODO consider abstracting aggregation as a function
+
+** load complete cell pixel counts generated above
+
+#+begin_src R :session *R:2*
+  cellFiles <- list.files( "cells", patt= "csv$", full.names= TRUE)
+  
+  cellDf <- ldply( cellFiles, read.csv,
+                  colClasses= c(
+                    rep( "integer", 2),
+                    rep( "character", 3)))
+  
+  
+#+end_src
