@@ -136,7 +136,42 @@ files for 2006 and 3109 files for 2008.
     data.frame( do.call( rbind,
                         str_match_all( cdlMeta, pattern))[, c( 2, 3)],
                stringsAsFactors= FALSE)
+  colnames( cdlMeta) <- c( "code", "cover")
+  rownames( cdlMeta) <- cdlMeta$code
   
+  simpleLevels <- c( "Corn", "Soybeans", "Alfalfa",
+                    "Other Hay/Non Alfalfa", "Switchgrass",
+                    "Pasture/Grass", "Pasture/Hay",
+                    "Fallow/Idle Cropland", "Dbl Crop Corn/Soybeans",
+                    "Dbl Crop Corn/Other", "Dbl Crop Soybeans/Other",
+                    "Wheat", "Other Crops", "Other")
+  
+  wheatLevels <- c( "Durum Wheat", "Spring Wheat", "Winter Wheat")
+  
+  nonCropLevels <- c( "Clouds/No Data", "Developed", "Water",
+                     "Wetlands", "Nonag/Undefined", "Aquaculture",
+                     "Open Water", "Perennial Ice/Snow",
+                     "Developed/Open Space", "Developed/Low Intensity",
+                     "Developed/Med Intensity",
+                     "Developed/High Intensity", "Barren",
+                     "Forest", "Deciduous Forest", "Evergreen Forest",
+                     "Mixed Forest", "Shrubland",
+                     "Grassland Herbaceous",
+                     "Woody Wetlands", "Herbaceous Wetlands")
+  
+  dblCornOtherPatt <- "^Dbl Crop (Oats|Barley|WinWht)/Corn"
+  dblSoyOtherPatt <- "^Dbl Crop (Soybeans/(Cotton|Oats)|(WinWht|Barley)/Soybeans)"
+  
+  cdlMeta <-
+    within( cdlMeta[ cdlMeta$code != 0, ], {
+      simple <- factor( rep( "Other Crops", length( code)),
+                       levels= simpleLevels)
+      simple[ cover %in% simpleLevels] <- cover[ cover %in% simpleLevels]
+      simple[ cover %in% wheatLevels] <- "Wheat"
+      simple[ cover %in% nonCropLevels] <- "Other"
+      simple[ str_detect( cover, dblCornOtherPatt)] <- "Dbl Crop Corn/Other"
+      simple[ str_detect( cover, dblSoyOtherPatt)] <- "Dbl Crop Soybeans/Other"
+    })
   
 #+end_src
 
@@ -148,7 +183,7 @@ files for 2006 and 3109 files for 2008.
 #+begin_src R
   library( reshape2)
   library( stringr)
-
+  
   freqFiles <- list.files( "freq", full.names= TRUE)
   
   freqRegex <- "^freq/CDL_([0-9]{4})_([0-9]{2})([0-9]{3})\\.csv"
@@ -164,10 +199,10 @@ files for 2006 and 3109 files for 2008.
       stfips <- freqMeta[ 3]
       cofips <- freqMeta[ 4]})
   }
-
+  
   roundSum <- function( x) round( sum( x))
-
-  freqDf <- adply( freqMeta, 1, loadFreqFile, .parallel= TRUE)[, -1]  
+  
+  freqDf <- adply( freqMeta, 1, loadFreqFile, .parallel= TRUE)[, -1]
 #+end_src
 
 
@@ -183,54 +218,34 @@ files for 2006 and 3109 files for 2008.
   
   write.csv( with( areaState, areaState[ stfips == "05" & !is.na( cdl),]),
             file="AR.csv", row.names= FALSE)
+#+end_src
+
+   
+
+*** figure out what is going on with Arkansas switchgrass
+
+#+begin_src R
+  arSwitch <- with( freqDf, freqDf[ !is.na( cdl)
+                                   & cdl == 62
+                                   & stfips == "05",])
   
-  with( freqDf, freqDf[ !is.na( cdl) & cdl == 62 & stfips == "05",])
+  arSwitchCt <- within( dcast( arSwitch, cofips ~ year,
+                              value.var= "n", fill= 0),
+                       diff <- `2008` - `2006`)
+  
+  rasterFipsYear <- function( year, stfips, cofips) {
+    raster( sprintf( "tif/CDL_%s_%s%s.tif", year, stfips, cofips))
+  }
   
   
 #+end_src
 
-
 ** aggregate simplified categories
 
 #+begin_src R
-  simpleLevels <- c( "Corn", "Soybeans", "Alfalfa",
-                    "Other Hay/Non Alfalfa", "Switchgrass",
-                    "Pasture/Grass", "Pasture/Hay",
-                    "Fallow/Idle Cropland", "Dbl Crop Corn/Soybeans",
-                    "Dbl Crop Corn/Other", "Dbl Crop Soybeans/Other",
-                    "Wheat", "Other Crops", "Other")
-  
-  nonCropLevels <- c( "Clouds/No Data", "Developed", "Water",
-                     "Wetlands", "Nonag/Undefined", "Aquaculture",
-                     "Open Water", "Perennial Ice/Snow",
-                     "Developed/Open Space", "Developed/Low Intensity",
-                     "Developed/Med Intensity",
-                     "Developed/High Intensity", "Barren",
-                     "Deciduous Forest", "Evergreen Forest",
-                     "Mixed Forest", "Shrubland",
-                     "Grassland Herbaceous", "Pasture/Hay",
-                     "Woody Wetlands", "Herbaceous Wetlands")
-  
-  dblCornOtherPatt <- "^Dbl Crop (Oats|Barley|WinWht)/Corn"
-  dblSoyOtherPatt <- "^Dbl Crop (Soybeans/(Cotton|Oats)|(WinWht|Barley)/Soybeans)"
-  
   freqDf <- within( freqDf[ !is.na( freqDf$cdl), ], {
-    cdl <- factor( cdl)
-    levels( cdl) <- c( levels( cdl), "254")
-    levels( cdl) <- cdlMeta[ -1, 2]
-    simple <- factor( rep( "Other Crops", length( cdl)),
-                     levels= simpleLevels)
-    sameAsCdl <- as.character( cdl) %in% simpleLevels[ 1:9]
-    dblCornOther <- str_detect( cdl, dblCornOtherPatt)
-    dblSoyOther <- str_detect( cdl, dblSoyOtherPatt)
-    wheat <- cdl %in% c( "Durum Wheat", "Spring Wheat", "Winter Wheat")
-    nonCrop <- as.character( cdl) %in% nonCropLevels
-    simple[ sameAsCdl] <- as.character( cdl[ sameAsCdl])
-    simple[ dblCornOther] <- "Dbl Crop Corn/Other"
-    simple[ dblSoyOther] <- "Dbl Crop Soybeans/Other"
-    simple[ wheat] <- "Wheat"
-    simple[ nonCrop] <- "Other"
-    rm( sameAsCdl, dblCornOther, dblSoyOther, wheat, nonCrop)
+    simple <- cdlMeta[ as.character( cdl), "simple"]
+    simple[ is.na( simple)] <- "Other"
     ha <- n *56^2 /10^4
   })
   
@@ -239,9 +254,9 @@ files for 2006 and 3109 files for 2008.
                       value.var= "ha",
                       fun.aggregate= roundSum,
                       margins= c( "stfips", "simple"))
-  
-  
   write.csv( areaStateCt, "cdlStateSimple.csv", row.names= FALSE)
+  
+  
   
   areaCountyCt <- dcast( freqDf, year + stfips + cofips ~ simple,
                        value.var= "ha",
