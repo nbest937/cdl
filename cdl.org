@@ -395,7 +395,7 @@ files for 2006 and 3109 files for 2008.
 
 
 * aggregate and cross-tabulate fractions by 5' grid cell
-  
+
 #+begin_src R
   library( Hmisc)
   library( reshape2)
@@ -414,43 +414,67 @@ files for 2006 and 3109 files for 2008.
     within( gridDf, {
       year <- gridMeta[ 2]
       stfips <- gridMeta[ 3]
-      cofips <- gridMeta[ 4]})
+      cofips <- gridMeta[ 4]
+      simple <- cdlMeta[ as.character( cdl), "simple"]
+      simple[ is.na( simple)] <- "Other"
+    })
   }
   
-  gridDf <- adply( gridMeta, 1, loadGridFile, .parallel= TRUE)[, -1]
-  
-  gridDf <- within( gridDf[ !is.na( gridDf$cdl), ], {
-    cdl <- factor( cdl)
-    levels( cdl) <- c( levels( cdl), "254")
-    levels( cdl) <- cdlMeta[ -1, 2]
-    simple <- factor( rep( "Other Crops", length( cdl)),
-                     levels= simpleLevels)
-    sameAsCdl <- as.character( cdl) %in% simpleLevels[ 1:9]
-    dblCornOther <- str_detect( cdl, dblCornOtherPatt)
-    dblSoyOther <- str_detect( cdl, dblSoyOtherPatt)
-    wheat <- cdl %in% c( "Durum Wheat", "Spring Wheat", "Winter Wheat")
-    nonCrop <- as.character( cdl) %in% nonCropLevels
-    simple[ sameAsCdl] <- as.character( cdl[ sameAsCdl])
-    simple[ dblCornOther] <- "Dbl Crop Corn/Other"
-    simple[ dblSoyOther] <- "Dbl Crop Soybeans/Other"
-    simple[ wheat] <- "Wheat"
-    simple[ nonCrop] <- "Other"
-    rm( sameAsCdl, dblCornOther, dblSoyOther, wheat, nonCrop)
-    ## ha <- round( n *56^2 /10^4)
-  })
-  
+  gridDf <- adply( gridMeta, 1, loadGridFile,
+                  .parallel= TRUE)[, -1]
   
   numericSum <- function( x) sum( as.numeric( x))
   
-  gridCt <- dcast( gridDf, year + grid ~ simple,
-                  value.var= "n",
+  gridCt <-
+    dcast( gridDf,
+          year+ grid + stfips + cofips ~ simple,
+          fun.aggregate= numericSum,
+          fill= 0, value.var= "n")
+  
+  cellFiles <- list.files( "cells", patt= "csv$", full.names= TRUE)
+  
+  cellDf <- ldply( cellFiles, read.csv,
+                  colClasses= c(
+                    rep( "integer", 2),
+                    rep( "character", 3)),
+                  .parallel= TRUE)
+  colnames( cellDf)[ 1:2] <- c( "grid", "N")
+  
+  merged <-
+    merge( gridCt, cellDf,
+          by= c( "grid", "stfips", "cofips", "year"),
+          all.x= TRUE)
+  
+  gridDfFilled <-
+    melt( merged,
+         id.vars= c( "grid", "stfips", "cofips", "year", "N"),
+         variable.name= "simple",
+         value.name= "n")
+  
+  gridDfScaled <-
+    ddply( gridDfFilled,
+          .( grid, year, simple),
+          function( df) {
+            res <-
+              with( df,
+                   data.frame( n= weighted.mean(
+                                 x= n,
+                                 w= N) * nrow( df),
+                              N= mean( N)))
+            within( res, frac <- n / N)
+          },
+          .parallel= TRUE)
+  
+  gridCt <- dcast( gridDfScaled, year + grid ~ simple,
+                  value.var= "frac",
                   fun.aggregate= numericSum,
-                  margins= c( "grid", "simple"))
+                  margins= c( "simple"))
   colnames( gridCt)[ colnames( gridCt) == "(all)"] <- "cdl"
-
+  
 #+end_src
 
-** TODO consider abstracting aggregation as a function
+** TODO come up with better names for cellDf and gridDf
+** TODO use common naming for CSV inputs (grid/cell)
 
 
 ** originally computed complete cell pixel counts globally
@@ -493,12 +517,6 @@ It seems that the CDL chunks are not aligned.
 ** load complete cell pixel counts generated above
 
 #+begin_src R :session *R:2*
-  cellFiles <- list.files( "cells", patt= "csv$", full.names= TRUE)
-  
-  cellDf <- ldply( cellFiles, read.csv,
-                  colClasses= c(
-                    rep( "integer", 2),
-                    rep( "character", 3)))
   
   
 #+end_src
