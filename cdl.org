@@ -123,6 +123,7 @@ files for 2006 and 3109 files for 2008.
 
 #+begin_src R
   library( XML)
+  library( stringr)
   
   cdlMeta <-
     xpathSApply( xmlInternalTreeParse( "metadata/cdlmeta_56m_r_ar_2008.xml"),
@@ -174,6 +175,141 @@ files for 2006 and 3109 files for 2008.
     })
   
 #+end_src
+
+#+RESULTS:
+|   1 | Corn                        | Corn                    |
+|   2 | Cotton                      | Other Crops             |
+|   3 | Rice                        | Other Crops             |
+|   4 | Sorghum                     | Other Crops             |
+|   5 | Soybeans                    | Soybeans                |
+|   6 | Sunflower                   | Other Crops             |
+|  10 | Peanuts                     | Other Crops             |
+|  11 | Tobacco                     | Other Crops             |
+|  12 | Sweet Corn                  | Other Crops             |
+|  13 | Pop or Orn Corn             | Other Crops             |
+|  14 | Mint                        | Other Crops             |
+|  21 | Barley                      | Other Crops             |
+|  22 | Durum Wheat                 | Wheat                   |
+|  23 | Spring Wheat                | Wheat                   |
+|  24 | Winter Wheat                | Wheat                   |
+|  25 | Other Small Grains          | Other Crops             |
+|  26 | Dbl Crop WinWht/Soybeans    | Dbl Crop Soybeans/Other |
+|  27 | Rye                         | Other Crops             |
+|  28 | Oats                        | Other Crops             |
+|  29 | Millet                      | Other Crops             |
+|  30 | Speltz                      | Other Crops             |
+|  31 | Canola                      | Other Crops             |
+|  32 | Flaxseed                    | Other Crops             |
+|  33 | Safflower                   | Other Crops             |
+|  34 | Rape Seed                   | Other Crops             |
+|  35 | Mustard                     | Other Crops             |
+|  36 | Alfalfa                     | Alfalfa                 |
+|  37 | Other Hay/Non Alfalfa       | Other Hay/Non Alfalfa   |
+|  38 | Camelina                    | Other Crops             |
+|  39 | Buckwheat                   | Other Crops             |
+|  41 | Sugarbeets                  | Other Crops             |
+|  42 | Dry Beans                   | Other Crops             |
+|  43 | Potatoes                    | Other Crops             |
+|  44 | Other Crops                 | Other Crops             |
+|  45 | Sugarcane                   | Other Crops             |
+|  46 | Sweet Potatoes              | Other Crops             |
+|  47 | Misc Vegs & Fruits          | Other Crops             |
+|  48 | Watermelons                 | Other Crops             |
+|  49 | Onions                      | Other Crops             |
+|  50 | Cucumbers                   | Other Crops             |
+|  51 | Chick Peas                  | Other Crops             |
+|  52 | Lentils                     | Other Crops             |
+|  53 | Peas                        | Other Crops             |
+|  54 | Tomatoes                    | Other Crops             |
+|  55 | Caneberries                 | Other Crops             |
+|  56 | Hops                        | Other Crops             |
+|  57 | Herbs                       | Other Crops             |
+|  58 | Clover/Wildflowers          | Other Crops             |
+|  59 | Sod/Grass Seed              | Other Crops             |
+|  60 | Switchgrass                 | Switchgrass             |
+|  61 | Fallow/Idle Cropland        | Fallow/Idle Cropland    |
+|  62 | Pasture/Grass               | Pasture/Grass           |
+|  63 | Forest                      | Other                   |
+|  64 | Shrubland                   | Other                   |
+|  65 | Barren                      | Other                   |
+|  66 | Cherries                    | Other Crops             |
+|  67 | Peaches                     | Other Crops             |
+|  68 | Apples                      | Other Crops             |
+|  69 | Grapes                      | Other Crops             |
+|  70 | Christmas Trees             | Other Crops             |
+|  71 | Other Tree Crops            | Other Crops             |
+|  72 | Citrus                      | Other Crops             |
+|  74 | Pecans                      | Other Crops             |
+|  75 | Almonds                     | Other Crops             |
+|  76 | Walnuts                     | Other Crops             |
+|  77 | Pears                       | Other Crops             |
+|  81 | Clouds/No Data              | Other                   |
+|  82 | Developed                   | Other                   |
+|  83 | Water                       | Other                   |
+|  87 | Wetlands                    | Other                   |
+|  88 | Nonag/Undefined             | Other                   |
+|  92 | Aquaculture                 | Other                   |
+| 111 | Open Water                  | Other                   |
+| 112 | Perennial Ice/Snow          | Other                   |
+| 121 | Developed/Open Space        | Other                   |
+| 122 | Developed/Low Intensity     | Other                   |
+| 123 | Developed/Med Intensity     | Other                   |
+| 124 | Developed/High Intensity    | Other                   |
+| 131 | Barren                      | Other                   |
+| 141 | Deciduous Forest            | Other                   |
+| 142 | Evergreen Forest            | Other                   |
+| 143 | Mixed Forest                | Other                   |
+| 152 | Shrubland                   | Other                   |
+| 171 | Grassland Herbaceous        | Other                   |
+| 181 | Pasture/Hay                 | Pasture/Hay             |
+| 190 | Woody Wetlands              | Other                   |
+| 195 | Herbaceous Wetlands         | Other                   |
+| 204 | Pistachios                  | Other Crops             |
+| 205 | Triticale                   | Other Crops             |
+| 206 | Carrots                     | Other Crops             |
+| 207 | Asparagus                   | Other Crops             |
+| 208 | Garlic                      | Other Crops             |
+| 209 | Cantaloupes                 | Other Crops             |
+| 210 | Prunes                      | Other Crops             |
+| 211 | Olives                      | Other Crops             |
+| 212 | Oranges                     | Other Crops             |
+| 213 | Honeydew Melons             | Other Crops             |
+| 214 | Broccoli                    | Other Crops             |
+| 216 | Peppers                     | Other Crops             |
+| 217 | Pomegranates                | Other Crops             |
+| 218 | Nectarines                  | Other Crops             |
+| 219 | Greens                      | Other Crops             |
+| 220 | Plums                       | Other Crops             |
+| 221 | Strawberries                | Other Crops             |
+| 222 | Squash                      | Other Crops             |
+| 223 | Apricots                    | Other Crops             |
+| 224 | Vetch                       | Other Crops             |
+| 225 | Dbl Crop WinWht/Corn        | Dbl Crop Corn/Other     |
+| 226 | Dbl Crop Oats/Corn          | Dbl Crop Corn/Other     |
+| 227 | Lettuce                     | Other Crops             |
+| 229 | Pumpkins                    | Other Crops             |
+| 230 | Dbl Crop Lettuce/Durum Wht  | Other Crops             |
+| 231 | Dbl Crop Lettuce/Cantaloupe | Other Crops             |
+| 232 | Dbl Crop Lettuce/Cotton     | Other Crops             |
+| 233 | Dbl Crop Lettuce/Barley     | Other Crops             |
+| 234 | Dbl Crop Durum Wht/Sorghum  | Other Crops             |
+| 235 | Dbl Crop Barley/Sorghum     | Other Crops             |
+| 236 | Dbl Crop WinWht/Sorghum     | Other Crops             |
+| 237 | Dbl Crop Barley/Corn        | Dbl Crop Corn/Other     |
+| 238 | Dbl Crop WinWht/Cotton      | Other Crops             |
+| 239 | Dbl Crop Soybeans/Cotton    | Dbl Crop Soybeans/Other |
+| 240 | Dbl Crop Soybeans/Oats      | Dbl Crop Soybeans/Other |
+| 241 | Dbl Crop Corn/Soybeans      | Dbl Crop Corn/Soybeans  |
+| 242 | Blueberries                 | Other Crops             |
+| 243 | Cabbage                     | Other Crops             |
+| 244 | Cauliflower                 | Other Crops             |
+| 245 | Celery                      | Other Crops             |
+| 246 | Radishes                    | Other Crops             |
+| 247 | Turnips                     | Other Crops             |
+| 248 | Eggplants                   | Other Crops             |
+| 249 | Gourds                      | Other Crops             |
+| 250 | Cranberries                 | Other Crops             |
+| 254 | Dbl Crop Barley/Soybeans    | Dbl Crop Soybeans/Other |
 
 
 * aggregate and cross-tabulate hectares by state and county
@@ -396,16 +532,18 @@ files for 2006 and 3109 files for 2008.
 
 * aggregate and cross-tabulate fractions by 5' grid cell
 
+depends on cdlMeta loaded above
+
 #+begin_src R
   library( Hmisc)
   library( reshape2)
+  library( stringr)
+  library( plyr)
+  library( doMC); registerDoMC( cores= 4)
   
   gridFiles <- list.files( "grid", full.names= TRUE)
-  
   gridRegex <- "^grid/CDL_([0-9]{4})_([0-9]{2})([0-9]{3})\\.csv"
   gridMeta <- str_match( gridFiles, gridRegex)
-  
-  
   
   loadGridFile <- function( gridMeta) {
     gridDf <- read.csv( gridMeta[ 1],
@@ -425,12 +563,6 @@ files for 2006 and 3109 files for 2008.
   
   numericSum <- function( x) sum( as.numeric( x))
   
-  gridCt <-
-    dcast( gridDf,
-          year+ grid + stfips + cofips ~ simple,
-          fun.aggregate= numericSum,
-          fill= 0, value.var= "n")
-  
   cellFiles <- list.files( "cells", patt= "csv$", full.names= TRUE)
   
   cellDf <- ldply( cellFiles, read.csv,
@@ -441,82 +573,183 @@ files for 2006 and 3109 files for 2008.
   colnames( cellDf)[ 1:2] <- c( "grid", "N")
   
   merged <-
-    merge( gridCt, cellDf,
-          by= c( "grid", "stfips", "cofips", "year"),
+    merge( gridDf, cellDf,
+          ## by= c( "grid", "stfips", "cofips", "year"),
           all.x= TRUE)
+
+#+end_src
+
+I used this to find cells with multiple counties/ alignments.
+
+#+begin_src R :tangle false
+  problemCells <-
+    subset( ddply( merged, .(grid, year), summarize,
+                  counties= length( unique( paste( stfips, cofips))),
+                  align= length( unique( N)),
+                  .parallel= TRUE,
+                  .progress= "text"),
+           counties > 1 & align > 1)
   
-  gridDfFilled <-
-    melt( merged,
-         id.vars= c( "grid", "stfips", "cofips", "year", "N"),
+  ## rbind(
+  ##   head( with( subset( problemCells, year == 2006),
+  ##              problemCells[ order( -align, -counties),])),
+  ##   head( with( subset( problemCells, year == 2008),
+  ##            problemCells[ order( -align, -counties),])))
+#+end_src
+
+#+begin_src R
+  head( with( problemCells, problemCells[ order( -align, -counties),]))
+#+end_src
+
+#+RESULTS:
+| 2718509 | 2008 | 5 | 4 |
+| 2735792 | 2008 | 5 | 4 |
+| 2744299 | 2008 | 5 | 4 |
+| 2830588 | 2006 | 5 | 4 |
+| 2830588 | 2008 | 5 | 4 |
+| 2934297 | 2008 | 5 | 4 |
+
+** write out the results one file per grid cell to alleviate memory problems
+
+#+begin_src R
+  writeMergedByCell <- function( df, dest= "merged") {
+    grid <- unique( df$grid)
+    fn <- sprintf( "%s/%s/merged.csv", dest, grid)
+    dir.create( dirname( fn))
+    write.csv( fn, df, row.names= FALSE)
+    fn
+  }
+  
+  perCell <- dlply( merged, .(grid), writeMergedByCell,
+                   .parallel= TRUE,
+                   .progress= "text")
+#+end_src
+ 
+** look at an example to write the scaling operations
+
+#+begin_src R
+  csv <- read.csv( "merged/2718509/merged.csv")
+  
+  with( csv,
+       unique( csv[ rev( order( year, stfips, cofips)),
+                   c( "year", "stfips", "cofips", "N")]))
+#+end_src
+
+#+RESULTS:
+| 2008 | 51 | 760 | 21723 |
+| 2008 | 51 | 145 | 21722 |
+| 2008 | 51 |  87 | 21718 |
+| 2008 | 51 |  75 | 21721 |
+| 2008 | 51 |  41 | 21718 |
+
+#+begin_src R
+  csv <-
+    read.csv( "merged/2718509/merged.csv",
+             colClasses= c(
+               cofips= "factor",
+               stfips= "factor"))
+  levels( csv$simple) <-
+    c( levels( csv$simple),
+      as.character( cdlMeta$simple))
+  
+  csvCt <-
+    dcast( csv,
+          year+ grid + stfips + cofips + N ~ simple,
+          fun.aggregate= numericSum,
+          fill= 0, drop= FALSE, value.var= "n")
+  
+  csvIdVars <-
+    c( "year", "grid", "stfips", "cofips", "N")
+  
+  csvFilled <-
+    melt( csvCt[ , c( csvIdVars,
+                     levels( cdlMeta$simple))],
+         id.vars= csvIdVars,
          variable.name= "simple",
          value.name= "n")
   
-  gridDfScaled <-
-    ddply( gridDfFilled,
+  scalingFunction <- function( df) {
+    res <-
+      with( df,
+           data.frame( n= weighted.mean(
+                         x= n,
+                         w= N) * nrow( df),
+                      N= mean( N)))
+    within( res, frac <- n / N)
+  }
+  
+  csvScaled <-
+    ddply( csvFilled,
           .( grid, year, simple),
-          function( df) {
-            res <-
-              with( df,
-                   data.frame( n= weighted.mean(
-                                 x= n,
-                                 w= N) * nrow( df),
-                              N= mean( N)))
-            within( res, frac <- n / N)
-          },
-          .parallel= TRUE)
+          scalingFunction,
+          .parallel= TRUE,
+          .progress= "text")
   
-  gridCt <- dcast( gridDfScaled, year + grid ~ simple,
-                  value.var= "frac",
-                  fun.aggregate= numericSum,
-                  margins= c( "simple"))
-  colnames( gridCt)[ colnames( gridCt) == "(all)"] <- "cdl"
-  
+  csvFracs <-
+    dcast( csvScaled,
+          grid + year ~ simple,
+          value.var= "frac")
 #+end_src
+
+** now just wrap the above up into a function
+
+#+begin_src R
+    scaleFractions <-
+      function( mergedCsvFn) ##,
+               ## progress= "none",
+               ## parallel= TRUE)
+    {
+      csv <-
+      read.csv( mergedCsvFn,
+                 colClasses= c(
+                   cofips= "factor",
+                   stfips= "factor"))
+      levels( csv$simple) <-
+        c( levels( csv$simple),
+          as.character( cdlMeta$simple))
+      csvCt <-
+        dcast( csv,
+              year+ grid + stfips + cofips + N ~ simple,
+              fun.aggregate= numericSum,
+              fill= 0, drop= FALSE, value.var= "n")
+      csvFilled <-
+        melt( csvCt[ , c( csvIdVars,
+                         levels( cdlMeta$simple))],
+             id.vars= csvIdVars,
+             variable.name= "simple",
+             value.name= "n")
+      csvScaled <-
+        ddply( csvFilled,
+              .( grid, year, simple),
+              scalingFunction)
+      dcast( csvScaled,
+            grid + year ~ simple,
+            value.var= "frac",
+            margins= "simple",
+            fun.aggregate= sum)
+    }
+    
+  registerDoMC( cores= 10)  
+  cdlFracs <- ldply( perCell, scaleFractions, .progress= "text", .parallel= TRUE)
+  
+  cdlFracs <- within( cdlFracs, {
+    grid <- as.character( grid)
+    year <- as.character( year)
+  })
+  
+  write.csv( format.df( cdlFracs,
+                         dec= 3,
+                         numeric.dollar= FALSE,
+                         na.blank= TRUE),
+              row.names= FALSE,
+              file= "cdlGridSimple.csv",
+              quote= FALSE)
+  
+  zip( "cdlSimple.zip", "cdlGridSimple.csv")
+    
+#+end_src
+
 
 ** TODO come up with better names for cellDf and gridDf
 ** TODO use common naming for CSV inputs (grid/cell)
 
-
-** originally computed complete cell pixel counts globally
-
-It seems that the CDL chunks are not aligned.
-
-#+begin_src R
-
-  cdlCellsFreq <- read.csv( "mask/cdlCellsFreq.csv")
-  
-  merged <-
-    within( merge( gridCt, cdlCellsFreq, by= "grid", all.x= TRUE),
-           noData <- n - cdl)
-  ##           Other <- Other + n - cdl)
-  
-  fracs <-
-    dcast( within( melt( merged[ , -which( colnames( merged) == "cdl")],
-                        c( "grid", "n", "year")),
-                  value <- value / n),
-          formula= year + grid ~ variable,
-          subset= .(variable != "cdl"),
-          margins= "variable",
-          fun.aggregate= sum)
-  
-  ## colnames( fracs)[ colnames( fracs) == "(all)"] <- "
-  
-  write.csv( format.df( fracs,
-                       dec= 3,
-                       numeric.dollar= FALSE,
-                       na.blank= TRUE),
-            row.names= FALSE,
-            file= "cdlGridSimple.csv",
-            quote= FALSE)
-  
-  
-  zip( "cdlSimple.zip", "cdlGridSimple.csv")
-#+end_src
-
-
-** load complete cell pixel counts generated above
-
-#+begin_src R :session *R:2*
-  
-  
-#+end_src
