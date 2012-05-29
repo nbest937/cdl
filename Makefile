@@ -22,3 +22,9 @@ mask:
 	ogr2ogr -overwrite -t_srs EPSG:4326 shp/index_wgs84.shp shp/cdl.shp
 	gdal_rasterize -l index_wgs84 -where "location LIKE 'tif/CDL_2006_%.tif'"  -at -burn 1 -a_nodata 255 -tr 0.08333333 0.08333333 -tap -ot UInt32 shp/index_wgs84.shp mask/CDL_2006.tif -q
 	gdal_rasterize -l index_wgs84 -where "location LIKE 'tif/CDL_2008_%.tif'"  -at -burn 1 -a_nodata 255 -tr 0.08333333 0.08333333 -tap -ot UInt32 shp/index_wgs84.shp mask/CDL_2008.tif -q
+
+hash:
+	sha1sum cdl*Simple.csv > SHA1SUM
+
+check:
+	sha1sum -c SHA1SUM
